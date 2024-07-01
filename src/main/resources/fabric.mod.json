@@ -1,0 +1,39 @@
+{
+	"schemaVersion": 1,
+	"id": "siarad",
+	"version": "${version}",
+	"name": "siarad",
+	"description": "This is an example description! Tell everyone what your mod is about!",
+	"authors": [
+		"Fetimo"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/",
+		"sources": "https://github.com/FabricMC/fabric-example-mod"
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/siarad/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"fetimo.siarad.Siarad"
+		],
+		"client": [
+			"fetimo.siarad.SiaradClient"
+		]
+	},
+	"mixins": [
+		"siarad.mixins.json",
+		{
+			"config": "siarad.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.15.11",
+		"minecraft": "~1.21",
+		"java": ">=21",
+		"fabric-api": "*",
+		"fabric-key-binding-api-v1": "*"
+	}
+}

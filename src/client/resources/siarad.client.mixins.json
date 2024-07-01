@@ -1,0 +1,12 @@
+{
+	"required": true,
+	"package": "fetimo.siarad.mixin.client",
+	"compatibilityLevel": "JAVA_21",
+	"client": [
+		"MixinChatHud",
+		"MixinChatScreen"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}
