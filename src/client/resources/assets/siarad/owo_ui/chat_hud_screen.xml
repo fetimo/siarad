@@ -1,0 +1,16 @@
+<owo-ui xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/wisp-forest/owo-lib/1.21/owo-ui.xsd">
+    <components>
+        <flow-layout direction="vertical">
+            <children>
+                <text-box id="message-input">
+                    <sizing>
+                        <horizontal method="expand">100</horizontal>
+                        <vertical method="expand">8</vertical>
+                    </sizing>
+                    <active>true</active>
+                </text-box>
+            </children>
+        </flow-layout>
+    </components>
+</owo-ui>

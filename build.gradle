@@ -16,6 +16,7 @@ repositories {
 	// Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
 	// See https://docs.gradle.org/current/userguide/declaring_repositories.html
 	// for more information about repositories.
+	maven { url 'https://maven.wispforest.io/releases/' }
 }
 
 loom {
@@ -28,6 +29,16 @@ loom {
 		}
 	}
 
+	runs {
+		testClient {
+			// Copies settings from another run configuration.
+			inherit client
+
+			configName = "Test Minecraft Client"
+			source = sourceSets.client
+		}
+	}
+
 }
 
 dependencies {
@@ -36,9 +47,11 @@ dependencies {
 	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
-	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
-	
+
+	// owo
+	modImplementation "io.wispforest:owo-lib:${project.owo_version}"
+	include "io.wispforest:owo-sentinel:${project.owo_version}"
 }
 
 processResources {

@@ -3,8 +3,7 @@
 	"package": "fetimo.siarad.mixin.client",
 	"compatibilityLevel": "JAVA_21",
 	"client": [
-		"MixinChatHud",
-		"MixinChatScreen"
+		"MixinMinecraftClient"
 	],
 	"injectors": {
 		"defaultRequire": 1

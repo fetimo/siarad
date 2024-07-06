@@ -15,7 +15,7 @@ public class ChatListener {
         // Listen to chat messages
         ServerMessageEvents.CHAT_MESSAGE.register((signedMessage, playerEntity, parameters) -> {
             String message = signedMessage.getContent().getString();
-            log.info(message);
+            log.info("CHAT_MESSAGE: " + message);
             synchronized (chatMessages) {
                 chatMessages.add(message);
                 if (chatMessages.size() > 10) { // Limit the number of stored messages
@@ -34,6 +34,8 @@ public class ChatListener {
 
     public static String addChatMessage(String message) {
         chatMessages.add(message);
+        // Tell the HUD to add it.
+        SiaradClient.addChatMessage(message);
         return message;
     }
 }
