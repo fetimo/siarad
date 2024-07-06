@@ -1,6 +1,10 @@
 package fetimo.siarad;
 
+import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.network.message.SignedMessage;
+import net.minecraft.text.Text;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -9,33 +13,38 @@ import java.util.List;
 
 public class ChatListener {
     public static final Logger log = LoggerFactory.getLogger(ChatListener.class);
-    private static final List<String> chatMessages = new ArrayList<>();
+    private static final List<SignedMessage> chatMessages = new ArrayList<>();
 
     public static void register() {
-        // Listen to chat messages
-        ServerMessageEvents.CHAT_MESSAGE.register((signedMessage, playerEntity, parameters) -> {
-            String message = signedMessage.getContent().getString();
-            log.info("CHAT_MESSAGE: " + message);
+        // Listen for chat messages to render.
+        ClientReceiveMessageEvents.CHAT.register((text, signedMessage, gameProfile, parameters, time) -> {
+            if (signedMessage == null) {
+                // I don't know when this would happen but just in case.
+                return;
+            }
+
+            SiaradClient.addChatMessage(signedMessage);
+
+            // Thread-safe sync! This means that messages can't be added out of order.
             synchronized (chatMessages) {
-                chatMessages.add(message);
+                chatMessages.add(signedMessage);
                 if (chatMessages.size() > 10) { // Limit the number of stored messages
                     chatMessages.removeFirst();
                 }
             }
         });
-
     }
 
-    public static List<String> getChatMessages() {
+    public static List<SignedMessage> getChatMessages() {
         synchronized (chatMessages) {
             return new ArrayList<>(chatMessages);
         }
     }
 
-    public static String addChatMessage(String message) {
-        chatMessages.add(message);
-        // Tell the HUD to add it.
-        SiaradClient.addChatMessage(message);
-        return message;
+    public static void addChatMessage(String message) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player != null) {
+            client.player.networkHandler.sendChatMessage(message);
+        }
     }
 }

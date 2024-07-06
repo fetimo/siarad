@@ -30,12 +30,10 @@ loom {
 	}
 
 	runs {
-		testClient {
-			// Copies settings from another run configuration.
+		secondClient {
 			inherit client
 
-			configName = "Test Minecraft Client"
-			source = sourceSets.client
+			configName = "Test Multiplayer Minecraft Client"
 		}
 	}
 

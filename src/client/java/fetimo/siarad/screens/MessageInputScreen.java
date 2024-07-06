@@ -48,11 +48,15 @@ public class MessageInputScreen extends BaseUIModelScreen<FlowLayout> {
                // Reset input.
                messageInput.setText("");
                // Close chat input.
-               this.client.setScreen(null);
+               if (this.client != null) {
+                   this.client.setScreen(null);
+               }
            }
 
            if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
-               this.client.setScreen(null);
+               if (this.client != null) {
+                   this.client.setScreen(null);
+               }
            }
 
            return true;

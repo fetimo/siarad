@@ -11,6 +11,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(MinecraftClient.class)
 public class MixinMinecraftClient {
+    // This is super important because it shows our custom input when the game would show the normal one.
     @Inject(method = "setScreen", at = @At("HEAD"), cancellable = true)
     private void onSetScreen(Screen screen, CallbackInfo info) {
         if (screen instanceof ChatScreen) {

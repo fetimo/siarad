@@ -2,6 +2,7 @@
         xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/wisp-forest/owo-lib/1.21/owo-ui.xsd">
     <components>
         <flow-layout direction="vertical">
+            <positioning type="absolute">0,100</positioning>
             <children>
                 <text-box id="message-input">
                     <sizing>
