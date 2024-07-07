@@ -18,7 +18,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.UUID;
 
 import static fetimo.siarad.SignedMessageUtils.getMessageId;
 
@@ -31,13 +30,23 @@ public class SiaradClient implements ClientModInitializer {
 		ChatListener.register();
 
 		// Add recent messages HUD.
-		Hud.add(COMPONENT_ID, () -> Containers.verticalFlow(Sizing.content(), Sizing.content())
-				.padding(Insets.of(10))
-				.surface(Surface.flat(0x77000000))
-				.positioning(Positioning.relative(0, 70))
-				.margins(Insets.top(5)));
+		Hud.add(COMPONENT_ID, () -> {
+			FlowLayout rootComponent = Containers.verticalFlow(Sizing.fill(45), Sizing.fill(45));
+
+			return rootComponent.child(
+					Containers.verticalScroll(
+							Sizing.fill(), Sizing.fill(),
+							Containers.verticalFlow(
+									Sizing.content(), Sizing.content()
+							).<FlowLayout>configure(flowLayout -> {
+								flowLayout.id("scroll-container");
+							})
+					).surface(Surface.flat(0x99000000)).padding(Insets.of(10))
+			).positioning(Positioning.relative(0, 70)).margins(Insets.top(5));
+		});
 	}
 
+	// Add a recent message to the HUD.
 	public static void addChatMessage(SignedMessage message) {
 		FlowLayout chatHud = (FlowLayout) Hud.getComponent(COMPONENT_ID);
 
@@ -45,7 +54,11 @@ public class SiaradClient implements ClientModInitializer {
 			return;
 		}
 
-		// Add a recent message to the HUD.
+		FlowLayout scrollContainer = chatHud.childById(FlowLayout.class, "scroll-container");
+
+		log.info("x is " + scrollContainer);
+
+		//* Time
         LocalDateTime localDateTime = LocalDateTime.ofInstant(message.getTimestamp(), ZoneId.systemDefault());
 
         // Define the DateTimeFormatter.
@@ -58,6 +71,7 @@ public class SiaradClient implements ClientModInitializer {
                 .color(Color.BLUE)
                 .margins(Insets.both(2, 2));
 
+		//* Player
 		// Find the name of the sender by getting all online players and filtering.
 		MinecraftClient client = MinecraftClient.getInstance();
 		List<ServerPlayerEntity> playerList = client.getServer().getPlayerManager().getPlayerList().stream().toList();
@@ -71,22 +85,26 @@ public class SiaradClient implements ClientModInitializer {
 		Component playerComponent = Components.label(Text.of(matchingPlayer.getDisplayName()))
                 .color(Color.GREEN)
                 .margins(Insets.both(2, 2));
+
+		//* Message
         Component textComponent = Components.label(message.getContent())
                             .margins(Insets.both(2, 2));
+
+		//* Row
         FlowLayout row = Containers
 				.horizontalFlow(Sizing.content(), Sizing.content());
 
-		// Messages don't have an ID, so we make one out of existing fields. Should be idempotent.
 		String rowId = getMessageId(message);
-		log.info("rowId: {}", rowId);
-		row.id(rowId);
+		row.child(timestampComponent);
+		row.child(playerComponent);
+		row.child(textComponent);
 
 		// Add all the sections of the message to the row.
-        row.child(timestampComponent);
-        row.child(playerComponent);
-        row.child(textComponent);
+		row.id(rowId);
 
-        chatHud.child(row);
+		scrollContainer.child(row);
+
+//        chatHud.child(row);
 
         // TODO Find and prune old messages. Need to work out state management.
 

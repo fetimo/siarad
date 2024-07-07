@@ -10,6 +10,7 @@
                         <vertical method="expand">8</vertical>
                     </sizing>
                     <active>true</active>
+                    <max-length>256</max-length>
                 </text-box>
             </children>
         </flow-layout>
