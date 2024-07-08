@@ -23,7 +23,11 @@ public class ChatListener {
                 return;
             }
 
-            SiaradClient.addChatMessage(signedMessage);
+            try {
+                SiaradClient.addChatMessage(signedMessage);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
 
             // Thread-safe sync! This means that messages can't be added out of order.
             synchronized (chatMessages) {

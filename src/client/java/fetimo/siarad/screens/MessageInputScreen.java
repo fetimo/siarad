@@ -37,6 +37,10 @@ public class MessageInputScreen extends BaseUIModelScreen<FlowLayout> {
             }
 
            if (keyCode == GLFW.GLFW_KEY_ENTER) {
+               if (text.trim().isEmpty()) {
+                   return false;
+               }
+
                // Process the message for sending.
                // Is this a command in disguise?
                boolean hasCommandWithoutSlash = commandChecker.check(text);

@@ -32,22 +32,20 @@ public class SiaradClient implements ClientModInitializer {
 		// Add recent messages HUD.
 		Hud.add(COMPONENT_ID, () -> {
 			FlowLayout rootComponent = Containers.verticalFlow(Sizing.fill(45), Sizing.fill(45));
+			rootComponent.verticalAlignment(VerticalAlignment.BOTTOM);
 
 			return rootComponent.child(
-					Containers.verticalScroll(
-							Sizing.fill(), Sizing.fill(),
-							Containers.verticalFlow(
-									Sizing.content(), Sizing.content()
-							).<FlowLayout>configure(flowLayout -> {
-								flowLayout.id("scroll-container");
-							})
-					).surface(Surface.flat(0x99000000)).padding(Insets.of(10))
+				Containers.verticalFlow(
+						Sizing.content(), Sizing.content()
+				).<FlowLayout>configure(flowLayout -> {
+					flowLayout.id("scroll-container");
+				})
 			).positioning(Positioning.relative(0, 70)).margins(Insets.top(5));
 		});
 	}
 
 	// Add a recent message to the HUD.
-	public static void addChatMessage(SignedMessage message) {
+	public static void addChatMessage(SignedMessage message) throws InterruptedException {
 		FlowLayout chatHud = (FlowLayout) Hud.getComponent(COMPONENT_ID);
 
 		if (chatHud == null) {
@@ -55,8 +53,6 @@ public class SiaradClient implements ClientModInitializer {
 		}
 
 		FlowLayout scrollContainer = chatHud.childById(FlowLayout.class, "scroll-container");
-
-		log.info("x is " + scrollContainer);
 
 		//* Time
         LocalDateTime localDateTime = LocalDateTime.ofInstant(message.getTimestamp(), ZoneId.systemDefault());
@@ -94,6 +90,8 @@ public class SiaradClient implements ClientModInitializer {
         FlowLayout row = Containers
 				.horizontalFlow(Sizing.content(), Sizing.content());
 
+		row.surface(Surface.VANILLA_TRANSLUCENT);
+
 		String rowId = getMessageId(message);
 		row.child(timestampComponent);
 		row.child(playerComponent);
@@ -104,9 +102,8 @@ public class SiaradClient implements ClientModInitializer {
 
 		scrollContainer.child(row);
 
-//        chatHud.child(row);
-
-        // TODO Find and prune old messages. Need to work out state management.
-
+		AnimationTimer.start(() -> {
+			row.horizontalSizing().animate(300, Easing.LINEAR, Sizing.fill(0)).forwards();
+		}, row::remove);
 	}
 }
