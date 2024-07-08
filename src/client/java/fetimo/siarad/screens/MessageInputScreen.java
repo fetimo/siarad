@@ -1,7 +1,7 @@
 package fetimo.siarad.screens;
 
 import fetimo.siarad.ChatListener;
-import fetimo.siarad.CommandChecker;
+import fetimo.siarad.utils.CommandChecker;
 import io.wispforest.owo.ui.base.BaseUIModelScreen;
 import io.wispforest.owo.ui.component.TextBoxComponent;
 import io.wispforest.owo.ui.container.FlowLayout;

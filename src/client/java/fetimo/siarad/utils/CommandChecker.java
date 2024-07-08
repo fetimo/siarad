@@ -1,4 +1,4 @@
-package fetimo.siarad;
+package fetimo.siarad.utils;
 
 import java.util.HashSet;
 import java.util.Set;

@@ -1,4 +1,4 @@
-package fetimo.siarad;
+package fetimo.siarad.utils;
 
 import java.time.Instant;
 import java.util.UUID;

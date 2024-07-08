@@ -1,10 +1,9 @@
 package fetimo.siarad;
 
+import fetimo.siarad.screens.MessageHud;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
-import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.network.message.SignedMessage;
-import net.minecraft.text.Text;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,7 +23,7 @@ public class ChatListener {
             }
 
             try {
-                SiaradClient.addChatMessage(signedMessage);
+                MessageHud.addChatMessage(signedMessage);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
