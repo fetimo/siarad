@@ -47,7 +47,11 @@ public class ChatListener {
     public static void addChatMessage(String message) {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player != null) {
-            client.player.networkHandler.sendChatMessage(message);
+            if (message.startsWith("/")) {
+                client.getNetworkHandler().sendChatCommand(message.substring(1));
+            } else {
+                client.getNetworkHandler().sendChatMessage(message);
+            }
         }
     }
 }
