@@ -1,83 +1,157 @@
 package fetimo.siarad.screens;
 
+import com.mojang.brigadier.suggestion.Suggestion;
+import com.mojang.brigadier.suggestion.Suggestions;
 import fetimo.siarad.ChatListener;
 import fetimo.siarad.utils.CommandChecker;
+import fetimo.siarad.utils.CommandSuggester;
 import io.wispforest.owo.ui.base.BaseUIModelScreen;
+import io.wispforest.owo.ui.component.DropdownComponent;
 import io.wispforest.owo.ui.component.TextBoxComponent;
 import io.wispforest.owo.ui.container.FlowLayout;
 import io.wispforest.owo.ui.core.Color;
+import io.wispforest.owo.ui.core.Component;
 import io.wispforest.owo.ui.core.Component.FocusSource;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.ChatInputSuggestor;
+import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.lwjgl.glfw.GLFW;
 
+import java.awt.event.KeyEvent;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+
 public class MessageInputScreen extends BaseUIModelScreen<FlowLayout> {
-    private ChatInputSuggestor commandSuggestor;
     private static final Logger log = LogManager.getLogger(MessageInputScreen.class);
     TextBoxComponent messageInput;
     CommandChecker commandChecker;
+    List<Suggestion> previousSuggestions;
+    String firstKeyStroke;
+    private CommandSuggester commandSuggester;
 
-    public MessageInputScreen() {
+    public MessageInputScreen(String firstKeyStrokeParam) {
         super(FlowLayout.class, DataSource.asset(Identifier.of("siarad", "chat_hud_screen")));
         commandChecker = new CommandChecker();
+        firstKeyStroke = firstKeyStrokeParam;
     }
 
     @Override
     protected void build(FlowLayout rootComponent) {
         messageInput = rootComponent.childById(TextBoxComponent.class, "message-input");
 
-        messageInput.keyPress().subscribe((keyCode, scale, modifier) -> {
-           String text = messageInput.getText();
+        messageInput.onChanged().subscribe((text) -> {
+            DropdownComponent commandSuggestionsDropdown = rootComponent.childById(
+                    DropdownComponent.class,
+                    "temp-dropdown"
+            );
 
-            // Make text green for commands or white for prose.
-            if (text.trim().startsWith("/")) {
-                this.commandSuggestor.refresh();
-                commandSuggestor.show(true);
-                commandSuggestor.setWindowActive(true);
-                log.info("open? " + commandSuggestor.isOpen());
-                messageInput.setEditableColor(Color.GREEN.rgb());
-            } else {
+            if (commandSuggestionsDropdown != null) {
+                commandSuggestionsDropdown.remove();
+            }
+
+            // Handle non-commands first because they're simpler.
+            if (!text.trim().startsWith("/")) {
                 messageInput.setEditableColor(Color.WHITE.rgb());
+                // Reset suggestion just in case.
+                messageInput.setSuggestion(null);
+            } else {
+                messageInput.setEditableColor(Color.GREEN.rgb());
+                DropdownComponent x = DropdownComponent.openContextMenu(
+                        this,
+                        rootComponent,
+                        FlowLayout::child,
+                        0,
+                        40,
+                        (dropdown) -> {
+                            dropdown.id("temp-dropdown");
+                        }
+                );
+
+                // Handle rendering the suggestions in the dropdown.
+                CompletableFuture<Suggestions> future = this.commandSuggester.refresh(text.toLowerCase(), false);
+                future.thenAccept(suggestions -> {
+                    Suggestion firstSuggestion = suggestions.getList().getFirst();
+                    previousSuggestions = suggestions.getList();
+
+                    // -1 because we need to account for the '/' suffix.
+                    if (messageInput.getText().trim().length() - 1 < firstSuggestion.getText().length()) {
+                        log.info("setSuggestion");
+                        messageInput.setSuggestion(
+                                firstSuggestion.getText().substring(
+                                        text.trim().length() - 1
+                                )
+                        );
+                    } else {
+                        log.info("unsetSuggestion");
+                        messageInput.setSuggestion(null);
+                    }
+
+                    List<Suggestion> fullList = suggestions.getList();
+                    List<Suggestion> relevantList = fullList.subList(0, Math.min(fullList.size(), 5));
+
+                    for (Suggestion suggestion : relevantList) {
+                        // TODO need to break this down into words.
+                        x.button(Text.of(suggestion.getText()), (foo) -> {
+                            messageInput.setSuggestion(null);
+                            messageInput.setText("/" + suggestion.getText());
+                        });
+                    }
+                });
+            }
+        });
+
+        messageInput.keyPress().subscribe((keyCode, scale, modifier) -> {
+            log.info("main input received keypress: " + keyCode + " " + KeyEvent.getKeyText(keyCode));
+            String letter = KeyEvent.getKeyText(keyCode);
+            boolean preemptive = letter.length() == 1;
+            final String text = messageInput.getText() + (preemptive ? letter.toLowerCase() : "");
+
+            if (keyCode == GLFW.GLFW_KEY_ENTER) {
+                if (text.trim().isEmpty()) {
+                    return false;
+                }
+
+                // Process the message for sending.
+                // Is this a command in disguise?
+                boolean hasCommandWithoutSlash = commandChecker.check(text);
+
+                ChatListener.sendChatMessage(hasCommandWithoutSlash ? "/" + text : text);
+                // Reset input.
+                messageInput.setText("");
+
+                // Close chat input.
+                if (this.client != null) {
+                    this.client.setScreen(null);
+                }
             }
 
-            if (keyCode == GLFW.GLFW_KEY_TAB) {
-                // TODO
-                commandSuggestor.show(false);
-                return false;
+            if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+                if (this.client != null) {
+                    this.client.setScreen(null);
+                }
             }
 
-           if (keyCode == GLFW.GLFW_KEY_ENTER) {
-               if (text.trim().isEmpty()) {
-                   return false;
-               }
+            // Navigate to suggestion dropdown.
+            if (keyCode == GLFW.GLFW_KEY_DOWN || keyCode == GLFW.GLFW_KEY_UP) {
+                DropdownComponent dropdown = rootComponent.childById(
+                        DropdownComponent.class,
+                        "temp-dropdown"
+                );
 
-               // Process the message for sending.
-               // Is this a command in disguise?
-               boolean hasCommandWithoutSlash = commandChecker.check(text);
-               if (hasCommandWithoutSlash) {
-                   text = "/" + text;
-               }
+                if (dropdown == null) {
+                    return false;
+                }
 
-               ChatListener.addChatMessage(text);
-               // Reset input.
-               messageInput.setText("");
+                ArrayList<Component> components = new ArrayList<>();
+                dropdown.collectDescendants(components);
+                Component entryToFocus = components.getLast();
+                dropdown.focusHandler().focus(entryToFocus, FocusSource.KEYBOARD_CYCLE);
+            }
 
-               // Close chat input.
-               if (this.client != null) {
-                   this.client.setScreen(null);
-               }
-           }
-
-           if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
-               if (this.client != null) {
-                   this.client.setScreen(null);
-               }
-           }
-
-           return true;
+            return true;
         });
     }
 
@@ -89,25 +163,20 @@ public class MessageInputScreen extends BaseUIModelScreen<FlowLayout> {
         assert messageInput.focusHandler() != null;
         messageInput.focusHandler().focus(messageInput, FocusSource.MOUSE_CLICK);
 
-
-
-
         // Setup command completion
         MinecraftClient client = MinecraftClient.getInstance();
-        this.commandSuggestor =
-                new ChatInputSuggestor(
-                        client,
-                        this,
-                        messageInput,
-                        client.textRenderer,
-                        false,
-                        false,
-                        0,
-                        10,
-                        false,
-                        0xFF0000);
+        this.commandSuggester = new CommandSuggester(
+                client,
+                messageInput,
+                client.textRenderer,
+                false,
+                false);
 
-        commandSuggestor.show(true);
-
+        // This must be after the command suggester is initialised.
+        // If '/' is the initiator we want to show command usage.
+        if (firstKeyStroke != null) {
+            messageInput.setText(firstKeyStroke);
+            firstKeyStroke = null;
+        }
     }
 }

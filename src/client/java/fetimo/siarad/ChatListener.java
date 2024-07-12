@@ -3,6 +3,7 @@ package fetimo.siarad;
 import fetimo.siarad.screens.MessageHud;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.network.message.SignedMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,13 +45,14 @@ public class ChatListener {
         }
     }
 
-    public static void addChatMessage(String message) {
+    public static void sendChatMessage(String message) {
         MinecraftClient client = MinecraftClient.getInstance();
-        if (client.player != null) {
+        ClientPlayNetworkHandler networkHandler = client.getNetworkHandler();
+        if (networkHandler != null) {
             if (message.startsWith("/")) {
-                client.getNetworkHandler().sendChatCommand(message.substring(1));
+                networkHandler.sendChatCommand(message.substring(1));
             } else {
-                client.getNetworkHandler().sendChatMessage(message);
+                networkHandler.sendChatMessage(message);
             }
         }
     }

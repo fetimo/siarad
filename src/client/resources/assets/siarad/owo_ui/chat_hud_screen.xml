@@ -2,7 +2,7 @@
         xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/wisp-forest/owo-lib/1.21/owo-ui.xsd">
     <components>
         <flow-layout direction="vertical">
-<!--            <positioning type="absolute">0,100</positioning>-->
+            <!--            <positioning type="absolute">0,100</positioning>-->
             <children>
                 <spacer>
                     <sizing>
@@ -17,6 +17,14 @@
                     <active>true</active>
                     <max-length>256</max-length>
                 </text-box>
+
+                <dropdown id="command-suggestions-list">
+                    <positioning type="absolute">0,40</positioning>
+                    <sizing>
+                        <vertical method="content">100</vertical>
+                        <horizontal method="content">100</horizontal>
+                    </sizing>
+                </dropdown>
             </children>
         </flow-layout>
     </components>
