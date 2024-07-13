@@ -1,11 +1,13 @@
 package fetimo.siarad.utils;
 
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.ParseResults;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.context.CommandContextBuilder;
+import com.mojang.brigadier.context.ParsedArgument;
 import com.mojang.brigadier.context.SuggestionContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.Suggestions;
@@ -17,10 +19,7 @@ import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.command.CommandSource;
 import net.minecraft.server.command.CommandManager;
-import net.minecraft.text.OrderedText;
-import net.minecraft.text.Style;
-import net.minecraft.text.Text;
-import net.minecraft.text.Texts;
+import net.minecraft.text.*;
 import net.minecraft.util.Formatting;
 
 import java.util.Collection;
@@ -29,9 +28,17 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 public class CommandSuggester {
     private static final Pattern WHITESPACE_PATTERN = Pattern.compile("(\\s+)");
+    private static final Style ERROR_STYLE = Style.EMPTY.withColor(Formatting.RED);
+    private static final Style INFO_STYLE = Style.EMPTY.withColor(Formatting.GRAY);
+    private static final List<Style> HIGHLIGHT_STYLES = Stream.of(
+                    Formatting.AQUA, Formatting.YELLOW, Formatting.GREEN, Formatting.LIGHT_PURPLE, Formatting.GOLD
+            )
+            .map(Style.EMPTY::withColor)
+            .collect(ImmutableList.toImmutableList());
     public final List<OrderedText> messages = Lists.newArrayList();
     final MinecraftClient client;
     final TextFieldWidget textField;
@@ -39,8 +46,8 @@ public class CommandSuggester {
     private final boolean slashOptional;
     private final boolean suggestingWhenEmpty;
     public CompletableFuture<Suggestions> pendingSuggestions;
+    public ParseResults<CommandSource> parse;
     boolean completingSuggestions;
-    private ParseResults<CommandSource> parse;
 
     public CommandSuggester(
             MinecraftClient client,
@@ -54,8 +61,9 @@ public class CommandSuggester {
         this.textRenderer = textRenderer;
         this.slashOptional = slashOptional;
         this.suggestingWhenEmpty = suggestingWhenEmpty;
+        this.textField.setRenderTextProvider(this::provideRenderText);
     }
-    
+
     private static OrderedText formatException(CommandSyntaxException exception) {
         Text text = Texts.toText(exception.getRawMessage());
         String string = exception.getContext();
@@ -77,6 +85,61 @@ public class CommandSuggester {
 
             return i;
         }
+    }
+
+    // The highlight function takes parsed command results and the original command string, then highlights different
+    // parts of the command based on the arguments and their positions. It uses progressively darker shades of green
+    // for each argument and gray for non-argument parts.
+    // Any remaining unparsed part of the command is highlighted in red.
+    private static OrderedText highlight(ParseResults<CommandSource> parse, String original, int firstCharacterIndex) {
+        List<OrderedText> list = Lists.newArrayList();
+        int currentPos = 0;
+
+        int initialRed = 0x00;
+        int initialGreen = 0xFF;
+        int initialBlue = 0x00;
+        int colorStep = 40;
+
+        CommandContextBuilder<CommandSource> commandContextBuilder = parse.getContext().getLastChild();
+        int argumentIndex = 0;
+
+        for (ParsedArgument<CommandSource, ?> parsedArgument : commandContextBuilder.getArguments().values()) {
+            int argStart = Math.max(parsedArgument.getRange().getStart() - firstCharacterIndex, 0);
+            if (argStart >= original.length()) {
+                break;
+            }
+
+            int argEnd = Math.min(parsedArgument.getRange().getEnd() - firstCharacterIndex, original.length());
+            if (argEnd > 0) {
+                list.add(OrderedText.styledForwardsVisitedString(original.substring(currentPos, argStart), Style.EMPTY.withColor(Formatting.OBFUSCATED)));
+
+                int red = Math.max(0, initialRed - (colorStep * argumentIndex));
+                int green = Math.max(0, initialGreen - (colorStep * argumentIndex));
+                int blue = Math.max(0, initialBlue - (colorStep * argumentIndex));
+                TextColor color = TextColor.fromRgb((red << 16) | (green << 8) | blue);
+
+                list.add(OrderedText.styledForwardsVisitedString(original.substring(argStart, argEnd), Style.EMPTY.withColor(color)));
+                currentPos = argEnd;
+                argumentIndex++;
+            }
+        }
+
+        if (parse.getReader().canRead()) {
+            int remainingStart = Math.max(parse.getReader().getCursor() - firstCharacterIndex, 0);
+            if (remainingStart < original.length()) {
+                int remainingEnd = Math.min(remainingStart + parse.getReader().getRemainingLength(), original.length());
+                list.add(OrderedText.styledForwardsVisitedString(original.substring(currentPos, remainingStart), Style.EMPTY.withColor(Formatting.DARK_AQUA)));
+                list.add(OrderedText.styledForwardsVisitedString(original.substring(remainingStart, remainingEnd), Style.EMPTY.withColor(Formatting.RED)));
+                currentPos = remainingEnd;
+            }
+        }
+
+        list.add(OrderedText.styledForwardsVisitedString(original.substring(currentPos), Style.EMPTY.withColor(Formatting.DARK_PURPLE)));
+        return OrderedText.concat(list);
+    }
+
+    private OrderedText provideRenderText(String original, int firstCharacterIndex) {
+        return this.parse != null ? highlight(this.parse, original, firstCharacterIndex) : OrderedText.styledForwardsVisitedString(original, Style.EMPTY);
     }
 
     public void showCommandSuggestions() {

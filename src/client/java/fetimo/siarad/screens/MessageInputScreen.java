@@ -39,16 +39,21 @@ public class MessageInputScreen extends BaseUIModelScreen<FlowLayout> {
     }
 
     private void setMessageFromSuggestion(String text, Suggestion suggestion) {
-        String substr;
+        String substr = "";
         String[] parts = text.split(" ");
         String stem = parts[parts.length - 1];
+        String suggestionText = suggestion.getText();
 
         // If the text ends with a space, the user is starting a new word
         if (text.endsWith(" ")) {
-            substr = suggestion.getText();
+            substr = suggestionText;
         } else {
             // If not, we need to replace the current incomplete word with the suggestion
-            substr = suggestion.getText().substring(stem.length());
+            if (suggestionText.length() >= stem.length()) {
+                substr = suggestionText.substring(stem.length());
+            } else {
+                substr = " ";
+            }
         }
 
         messageInput.setSuggestion(null);
@@ -65,10 +70,12 @@ public class MessageInputScreen extends BaseUIModelScreen<FlowLayout> {
             newText = "/" + newText;
         }
 
+//        Text.of("test").getStyle();
+
+//        messageInput.setText(newText);
         messageInput.setText(newText);
         messageInput.setCursorToEnd(false);
         messageInput.focusHandler().focus(messageInput, FocusSource.MOUSE_CLICK);
-
     }
 
     @Override
@@ -143,8 +150,10 @@ public class MessageInputScreen extends BaseUIModelScreen<FlowLayout> {
             final String text = messageInput.getText() + (preemptive ? letter.toLowerCase() : "");
 
             if (keyCode == GLFW.GLFW_KEY_TAB) {
+                // Weirdly the tab key inserts spaces rather than a tab space.
+                // So we just remove the last 4 characters.
                 setMessageFromSuggestion(
-                        messageInput.getText().trim(),
+                        text.substring(0, text.length() - 4),
                         previousSuggestions.getFirst()
                 );
 
@@ -194,6 +203,7 @@ public class MessageInputScreen extends BaseUIModelScreen<FlowLayout> {
             return true;
         });
     }
+
 
     @Override
     protected void init() {
