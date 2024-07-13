@@ -38,6 +38,39 @@ public class MessageInputScreen extends BaseUIModelScreen<FlowLayout> {
         firstKeyStroke = firstKeyStrokeParam;
     }
 
+    private void setMessageFromSuggestion(String text, Suggestion suggestion) {
+        String substr;
+        String[] parts = text.split(" ");
+        String stem = parts[parts.length - 1];
+
+        // If the text ends with a space, the user is starting a new word
+        if (text.endsWith(" ")) {
+            substr = suggestion.getText();
+        } else {
+            // If not, we need to replace the current incomplete word with the suggestion
+            substr = suggestion.getText().substring(stem.length());
+        }
+
+        messageInput.setSuggestion(null);
+        // To replace the last incomplete word, we remove the stem and add the suggestion
+        String newText;
+        if (text.endsWith(" ")) {
+            newText = text + substr;
+        } else {
+            newText = text.substring(0, text.length() - stem.length()) + suggestion.getText();
+        }
+
+        // Fix case where it strips the slash.
+        if (!newText.startsWith("/")) {
+            newText = "/" + newText;
+        }
+
+        messageInput.setText(newText);
+        messageInput.setCursorToEnd(false);
+        messageInput.focusHandler().focus(messageInput, FocusSource.MOUSE_CLICK);
+
+    }
+
     @Override
     protected void build(FlowLayout rootComponent) {
         messageInput = rootComponent.childById(TextBoxComponent.class, "message-input");
@@ -59,7 +92,7 @@ public class MessageInputScreen extends BaseUIModelScreen<FlowLayout> {
                 messageInput.setSuggestion(null);
             } else {
                 messageInput.setEditableColor(Color.GREEN.rgb());
-                DropdownComponent x = DropdownComponent.openContextMenu(
+                DropdownComponent dd = DropdownComponent.openContextMenu(
                         this,
                         rootComponent,
                         FlowLayout::child,
@@ -78,11 +111,13 @@ public class MessageInputScreen extends BaseUIModelScreen<FlowLayout> {
 
                     // -1 because we need to account for the '/' suffix.
                     if (messageInput.getText().trim().length() - 1 < firstSuggestion.getText().length()) {
-                        log.info("setSuggestion");
+                        String stem = List.of(text.split(" ")).getLast();
                         messageInput.setSuggestion(
-                                firstSuggestion.getText().substring(
-                                        text.trim().length() - 1
-                                )
+                                // If you have written ti and the suggestion is time the suggestion is me.
+                                firstSuggestion.getText()
+                                        .substring(
+                                                stem.length() - 1
+                                        )
                         );
                     } else {
                         log.info("unsetSuggestion");
@@ -93,10 +128,8 @@ public class MessageInputScreen extends BaseUIModelScreen<FlowLayout> {
                     List<Suggestion> relevantList = fullList.subList(0, Math.min(fullList.size(), 5));
 
                     for (Suggestion suggestion : relevantList) {
-                        // TODO need to break this down into words.
-                        x.button(Text.of(suggestion.getText()), (foo) -> {
-                            messageInput.setSuggestion(null);
-                            messageInput.setText("/" + suggestion.getText());
+                        dd.button(Text.of(suggestion.getText()), (foo) -> {
+                            setMessageFromSuggestion(text, suggestion);
                         });
                     }
                 });
@@ -109,6 +142,15 @@ public class MessageInputScreen extends BaseUIModelScreen<FlowLayout> {
             boolean preemptive = letter.length() == 1;
             final String text = messageInput.getText() + (preemptive ? letter.toLowerCase() : "");
 
+            if (keyCode == GLFW.GLFW_KEY_TAB) {
+                setMessageFromSuggestion(
+                        messageInput.getText().trim(),
+                        previousSuggestions.getFirst()
+                );
+
+                return false;
+            }
+
             if (keyCode == GLFW.GLFW_KEY_ENTER) {
                 if (text.trim().isEmpty()) {
                     return false;
@@ -119,8 +161,6 @@ public class MessageInputScreen extends BaseUIModelScreen<FlowLayout> {
                 boolean hasCommandWithoutSlash = commandChecker.check(text);
 
                 ChatListener.sendChatMessage(hasCommandWithoutSlash ? "/" + text : text);
-                // Reset input.
-                messageInput.setText("");
 
                 // Close chat input.
                 if (this.client != null) {
