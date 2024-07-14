@@ -1,7 +1,6 @@
 package fetimo.siarad.utils;
 
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.ParseResults;
@@ -28,17 +27,9 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 
 public class CommandSuggester {
     private static final Pattern WHITESPACE_PATTERN = Pattern.compile("(\\s+)");
-    private static final Style ERROR_STYLE = Style.EMPTY.withColor(Formatting.RED);
-    private static final Style INFO_STYLE = Style.EMPTY.withColor(Formatting.GRAY);
-    private static final List<Style> HIGHLIGHT_STYLES = Stream.of(
-                    Formatting.AQUA, Formatting.YELLOW, Formatting.GREEN, Formatting.LIGHT_PURPLE, Formatting.GOLD
-            )
-            .map(Style.EMPTY::withColor)
-            .collect(ImmutableList.toImmutableList());
     public final List<OrderedText> messages = Lists.newArrayList();
     final MinecraftClient client;
     final TextFieldWidget textField;

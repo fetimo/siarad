@@ -24,6 +24,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+// TODO create class for message history.
+
 public class MessageInputScreen extends BaseUIModelScreen<FlowLayout> {
     private static final Logger log = LogManager.getLogger(MessageInputScreen.class);
     TextBoxComponent messageInput;
@@ -70,9 +72,6 @@ public class MessageInputScreen extends BaseUIModelScreen<FlowLayout> {
             newText = "/" + newText;
         }
 
-//        Text.of("test").getStyle();
-
-//        messageInput.setText(newText);
         messageInput.setText(newText);
         messageInput.setCursorToEnd(false);
         messageInput.focusHandler().focus(messageInput, FocusSource.MOUSE_CLICK);
@@ -139,6 +138,47 @@ public class MessageInputScreen extends BaseUIModelScreen<FlowLayout> {
                             setMessageFromSuggestion(text, suggestion);
                         });
                     }
+
+                    ArrayList<Component> components = new ArrayList<>();
+                    dd.collectDescendants(components);
+
+                    // TODO need to fix this mess and sort out index bugs.
+                    for (int index = 0; index < components.size(); index++) {
+                        Component currentComponent = components.get(index);
+                        int finalIndex = index;
+
+                        currentComponent.keyPress().subscribe((keyCode, scancode, mods) -> {
+                            Component nextComponent = null;
+                            int suggestionIndex = Math.min(finalIndex - 1, relevantList.size() - 1);
+                            if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_RIGHT) {
+                                setMessageFromSuggestion(text, relevantList.get(suggestionIndex - 1));
+                                return true;
+                            }
+
+                            if (keyCode == GLFW.GLFW_KEY_UP && finalIndex > 2) {
+                                nextComponent = components.get(finalIndex - 1);
+                                currentComponent.focusHandler().focus(nextComponent, FocusSource.KEYBOARD_CYCLE);
+                            }
+
+                            if (keyCode == GLFW.GLFW_KEY_DOWN && finalIndex < components.size() - 1) {
+                                nextComponent = components.get(finalIndex + 1);
+                                currentComponent.focusHandler().focus(nextComponent, FocusSource.KEYBOARD_CYCLE);
+                            }
+
+                            if (nextComponent != null && messageInput.getText().trim().length() - 1 < firstSuggestion.getText().length()) {
+                                String stem = List.of(text.split(" ")).getLast();
+                                messageInput.setSuggestion(
+                                        // If you have written ti and the suggestion is time the suggestion is me.
+                                        relevantList.get(suggestionIndex).getText()
+                                                .substring(
+                                                        stem.length() - 1
+                                                )
+                                );
+                            }
+
+                            return true;
+                        });
+                    }
                 });
             }
         });
@@ -196,14 +236,16 @@ public class MessageInputScreen extends BaseUIModelScreen<FlowLayout> {
 
                 ArrayList<Component> components = new ArrayList<>();
                 dropdown.collectDescendants(components);
-                Component entryToFocus = components.getLast();
+
+                Component entryToFocus = keyCode == GLFW.GLFW_KEY_UP ?
+                        components.getLast() : components.get(2);
+
                 dropdown.focusHandler().focus(entryToFocus, FocusSource.KEYBOARD_CYCLE);
             }
 
             return true;
         });
     }
-
 
     @Override
     protected void init() {
